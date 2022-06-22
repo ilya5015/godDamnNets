@@ -179,7 +179,7 @@ class Parse:
         return person_actor_list, person_director_list
 
     def personParsingAlternate(self, person_id, ancestor, kindred, max_kindred):
-        while kindred < max_kindred:
+        while int(kindred) < int(max_kindred):
             URL = f'https://rus.kinorium.com/name/{person_id}/'
             movies_actor_list, movies_director_list = self.addPersonDatabase(URL, ancestor, kindred)
             kindred += 1
