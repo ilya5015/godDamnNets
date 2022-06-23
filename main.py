@@ -179,7 +179,7 @@ class Parse:
         return person_actor_list, person_director_list
 
     def personParsingAlternate(self, person_id, ancestor, kindred, max_kindred):
-        while int(kindred) < int(max_kindred):
+        if int(kindred) <= int(max_kindred):
             URL = f'https://rus.kinorium.com/name/{person_id}/'
             movies_actor_list, movies_director_list = self.addPersonDatabase(URL, ancestor, kindred)
             kindred += 1
@@ -267,7 +267,7 @@ def main():
         print(
             'In order to add person to the database you need to enter max degree of kindred with next parseable persons: \n'
             '!!! IN CURRENT VERSION OF PROGRAMME MAX DEGREE OF KINDRED CANT BE MORE THAN 3')
-        max_kindred = input('Enter degree of kindred: ')
+        max_kindred = int(input('Enter degree of kindred: '))
         d.createNetwork(max_kindred)
         print('HERE`S YOUR NET !!!')
     else:
