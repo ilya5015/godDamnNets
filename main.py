@@ -28,7 +28,6 @@ class Parse:
                 if elem.isdigit():
                     person_id += elem
             person_name = person_info_div.findChild('h1', class_='person-page__title').findChild('div', class_='person-page__title-elements').text.strip(' ')
-            print(person_info_div)
             if person_info_div.findChild('meta', {'itemprop':'birthDate'}) != None:
                 person_birth_date = person_info_div.findChild('meta', {'itemprop':'birthDate'}).attrs['content']
             else:
@@ -85,7 +84,6 @@ class Parse:
                         movie_name = movie.text.replace(u'\xa0', u' ')
                         movie_id = int(movie.attrs['data-id'])
                         movies_director_list[movie_id] = movie_name
-                        print(movies_director_list)
         else:
             print('theres a problem while getting a response')
 
@@ -143,7 +141,7 @@ class Parse:
             db.commit()
         else:
             pass
-
+        print('person added')
         return movies_actor_list, movies_director_list
 
     def addMovieDatabase(self, URL):
@@ -173,32 +171,61 @@ class Parse:
         else:
             pass
 
-        for elem in sql.execute("SELECT * FROM movies"):
-            print(elem)
-
         return person_actor_list, person_director_list
 
-    def personParsingAlternate(self, person_id, ancestor, kindred, max_kindred):
-        if int(kindred) <= int(max_kindred):
-            URL = f'https://rus.kinorium.com/name/{person_id}/'
-            movies_actor_list, movies_director_list = self.addPersonDatabase(URL, ancestor, kindred)
-            kindred += 1
-            print(kindred)
-            for key in movies_actor_list:
+    def personParsingRotate(self, person_id, ancestor, kindred):
+        persons_actor_list = []
+        persons_director_list = []
+        URL = f'https://rus.kinorium.com/name/{person_id}/'
+        movies_actor_list, movies_director_list = self.addPersonDatabase(URL, ancestor, kindred)
+        for key in movies_actor_list:
+            if key != person_id:
                 URL1 = f'https://rus.kinorium.com/{key}/'
-                person_actor_list1, person_director_list1 = self.addMovieDatabase(URL1)
-                for key2 in person_actor_list1:
-                    self.personParsingAlternate(key2, person_id, kindred, max_kindred)
-                for key2 in person_director_list1:
-                    self.personParsingAlternate(key2, person_id, kindred, max_kindred)
+                person_actor_list, person_director_list = self.addMovieDatabase(URL1)
+                persons_actor_list += person_actor_list
+                persons_director_list += person_director_list
+        for key in movies_director_list:
+            if key != person_id:
+                URL1 = f'https://rus.kinorium.com/{key}/'
+                person_actor_list, person_director_list = self.addMovieDatabase(URL1)
+                persons_actor_list += person_actor_list
+                persons_director_list += person_director_list
+        return persons_actor_list, persons_director_list
 
-            for key in movies_director_list:
-                URL1 = f'https://rus.kinorium.com/{key}/'
-                person_actor_list1, person_director_list1 = self.addMovieDatabase(URL1)
-                for key2 in person_actor_list1:
-                    self.personParsingAlternate(key2, person_id, kindred, max_kindred)
-                for key2 in person_director_list1:
-                    self.personParsingAlternate(key2, person_id, kindred, max_kindred)
+    def personParsingAlternate(self, person_id, ancestor, kindred):
+            persons_actor_list, persons_director_list = self.personParsingRotate(person_id, ancestor, kindred)
+            for key1 in persons_actor_list:
+                persons_actor_list1, persons_director_list1 = self.personParsingRotate(key1, ancestor, kindred+1)
+                for key2 in persons_actor_list1:
+                    if key2 != key1:
+                        persons_actor_list2, persons_director_list2 = self.personParsingRotate(key2, key1, kindred + 2)
+                        for key3 in persons_actor_list2:
+                            persons_actor_list3, persons_director_list3 = self.personParsingRotate(key3, key2, kindred + 3)
+                        for key3 in persons_director_list2:
+                            persons_actor_list3, persons_director_list3 = self.personParsingRotate(key3, key2, kindred + 3)
+                for key2 in persons_director_list1:
+                    if key2 != key1:
+                        persons_actor_list2, persons_director_list2 = self.personParsingRotate(key2, key1, kindred + 2)
+                        for key3 in persons_actor_list2:
+                            persons_actor_list3, persons_director_list3 = self.personParsingRotate(key3, key2, kindred + 3)
+                        for key3 in persons_director_list2:
+                            persons_actor_list3, persons_director_list3 = self.personParsingRotate(key3, key2, kindred + 3)
+            for key1 in persons_director_list:
+                persons_actor_list1, persons_director_list1 = self.personParsingRotate(key1, ancestor, kindred + 1)
+                for key2 in persons_actor_list1:
+                    if key2 != key1:
+                        persons_actor_list2, persons_director_list2 = self.personParsingRotate(key2, key1, kindred + 2)
+                        for key3 in persons_actor_list2:
+                            persons_actor_list3, persons_director_list3 = self.personParsingRotate(key3, key2, kindred + 3)
+                        for key3 in persons_director_list2:
+                            persons_actor_list3, persons_director_list3 = self.personParsingRotate(key3, key2, kindred + 3)
+                for key2 in persons_director_list1:
+                    if key2 != key1:
+                        persons_actor_list2, persons_director_list2 = self.personParsingRotate(key2, key1, kindred + 2)
+                        for key3 in persons_actor_list2:
+                            persons_actor_list3, persons_director_list3 = self.personParsingRotate(key3, key2, kindred + 3)
+                        for key3 in persons_director_list2:
+                            persons_actor_list3, persons_director_list3 = self.personParsingRotate(key3, key2, kindred + 3)
 
     def createNetwork(self, kindred):
         graph = nx.DiGraph()
@@ -219,6 +246,7 @@ class Parse:
                             graph.add_edge(node1, node2)
                             ancestor2 = node2[1]
                             for node3 in sql.execute(f"SELECT person_name, person_id FROM persons where kindred = 3 and ancestor = '{ancestor2}'"):
+                                print(node3)
                                 graph.add_node(node3)
                                 graph.add_edge(node2, node3)
 
@@ -260,8 +288,7 @@ def main():
     if tick == '1':
         print('In order to add person to the database you need to enter his/her id and max degree of kindred with next parseable persons: \n')
         person_id = input('Enter person id: ')
-        max_kindred = input('Enter degree of kindred: ')
-        d.personParsingAlternate(person_id, person_id, 0, max_kindred)
+        d.personParsingAlternate(person_id, person_id, 0)
         print('Person was succesfully added to the database')
     elif tick == '2':
         print(
